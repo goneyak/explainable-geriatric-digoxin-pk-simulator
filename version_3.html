@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Geriatric Digoxin PK Digital Twin v3.0 — MIPD Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+    body{background:#0f172a;color:#e5e7eb;min-height:100vh;display:flex;align-items:stretch;justify-content:center;padding:24px}
+    .container{max-width:1280px;width:100%;background:#020617;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,.4);display:grid;grid-template-columns:360px 1fr;gap:0;overflow:hidden;border:1px solid #1f2937}
+    @media(max-width:960px){.container{grid-template-columns:1fr}}
+
+    /* ── Sidebar ── */
+    .sidebar{background:radial-gradient(circle at top left,#1f2937,#020617);padding:24px 24px 32px;border-right:1px solid #1f2937;overflow-y:auto;max-height:100vh}
+    .badge{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;padding:4px 9px;border-radius:999px;background:rgba(56,189,248,.15);color:#7dd3fc;margin-bottom:10px}
+    .title{font-size:1.3rem;font-weight:600;margin-bottom:4px}
+    .subtitle{font-size:.82rem;color:#9ca3af;margin-bottom:14px;line-height:1.35}
+    .section-title{font-size:.88rem;font-weight:600;margin:16px 0 6px;color:#e5e7eb}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+    .form-group{display:flex;flex-direction:column;gap:3px;font-size:.78rem}
+    label{color:#9ca3af}
+    input,select{padding:5px 7px;max-width:140px;border-radius:10px;border:1px solid #374151;background:rgba(15,23,42,.85);color:#e5e7eb;font-size:.82rem;outline:none}
+    input:focus,select:focus{border-color:#38bdf8;box-shadow:0 0 0 1px rgba(56,189,248,.4)}
+    .button{width:100%;margin-top:16px;padding:9px 12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-weight:600;font-size:.95rem;cursor:pointer;transition:transform .08s,box-shadow .08s;display:inline-flex;justify-content:center;align-items:center;gap:6px}
+    .button:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(22,163,74,.45)}
+    .button:active{transform:translateY(0);box-shadow:none}
+    .tdm-hint{font-size:.7rem;color:#6b7280;margin-top:2px}
+
+    /* ── Main ── */
+    .main{padding:24px 28px 28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:100vh}
+    .main-top{display:flex;flex-direction:column;gap:8px}
+    .chart-title{font-size:.9rem;font-weight:500}
+    .chart-subtitle{font-size:.75rem;color:#9ca3af}
+    .stats-grid{margin-top:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:960px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+    .stat-card{background:#020617;border-radius:14px;border:1px solid #1f2937;padding:8px 10px}
+    .stat-label{font-size:.68rem;color:#9ca3af;margin-bottom:2px}
+    .stat-value{font-size:.95rem;font-weight:600}
+    .stat-tag{font-size:.68rem;margin-top:1px;color:#6b7280}
+
+    /* Alert cards */
+    .alerts-panel{display:flex;flex-direction:column;gap:6px}
+    .alert-card{padding:8px 10px;border-radius:10px;font-size:.78rem;line-height:1.35;display:flex;align-items:flex-start;gap:8px}
+    .alert-card .icon{flex-shrink:0;font-size:1rem;margin-top:1px}
+    .alert-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#fca5a5}
+    .alert-warning{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.22);color:#fde68a}
+    .alert-info{background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.20);color:#bae6fd}
+
+    /* Explain & Bayesian cards */
+    .explain-card{background:#020617;border-radius:14px;border:1px solid #1f2937;padding:10px 12px}
+    .explain-title{font-size:.85rem;font-weight:600;margin-bottom:4px;color:#e5e7eb}
+    .explain-body{font-size:.78rem;line-height:1.4;color:#9ca3af}
+
+    /* Chart */
+    .chart-card{margin-top:8px;background:radial-gradient(circle at top right,#111827,#020617);border-radius:16px;border:1px solid #1f2937;padding:12px 14px 16px;flex:1;display:flex;flex-direction:column;gap:6px}
+    .chart-wrapper{margin-top:8px;position:relative;height:340px;width:100%}
+
+    /* Dose table */
+    .dose-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:.76rem}
+    .dose-table th,.dose-table td{border-bottom:1px solid #1f2937;padding:4px 6px;text-align:center}
+    .dose-table th{color:#e5e7eb;font-weight:500}
+    .pill-safe{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.66rem;background:rgba(34,197,94,.18);color:#bbf7d0}
+    .pill-low{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.66rem;background:rgba(59,130,246,.18);color:#bfdbfe}
+    .pill-high{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.66rem;background:rgba(239,68,68,.18);color:#fecaca}
+
+    /* Validation metrics */
+    .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+    .metric-card{background:rgba(15,23,42,.6);border-radius:10px;border:1px solid #1f2937;padding:6px 8px;text-align:center}
+    .metric-label{font-size:.64rem;color:#9ca3af}
+    .metric-value{font-size:.9rem;font-weight:600;margin-top:2px}
+
+    /* Collapsible model card */
+    details{margin-top:6px}
+    details summary{cursor:pointer;font-size:.82rem;font-weight:600;color:#9ca3af;padding:6px 0}
+    details summary:hover{color:#e5e7eb}
+    details .model-card-body{font-size:.75rem;line-height:1.5;color:#9ca3af;padding:6px 0}
+    details .model-card-body table{width:100%;border-collapse:collapse;margin:8px 0;font-size:.72rem}
+    details .model-card-body th,details .model-card-body td{border-bottom:1px solid #1f2937;padding:3px 6px;text-align:left}
+    details .model-card-body th{color:#e5e7eb;font-weight:500}
+
+    footer{font-size:.65rem;color:#6b7280;margin-top:8px}
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <!-- ════════════════ SIDEBAR ════════════════ -->
+  <aside class="sidebar">
+    <div class="badge">
+      <span>💊 PK Digital Twin v3.0</span>
+      <span style="opacity:.7">MIPD Prototype · Digoxin · Geriatric</span>
+    </div>
+    <h1 class="title">Geriatric Digoxin PK Digital Twin</h1>
+    <p class="subtitle">
+      Two-compartment PopPK · Monte Carlo 95 % PI · Bayesian MAP TDM ·
+      MC-based precision dosing.
+    </p>
+
+    <!-- 1. Patient -->
+    <h2 class="section-title">1. Patient Info</h2>
+    <div class="form-grid">
+      <div class="form-group"><label for="age">Age (yr)</label><input id="age" type="number" value="80"/></div>
+      <div class="form-group"><label for="weight">Weight (kg)</label><input id="weight" type="number" value="55"/></div>
+      <div class="form-group"><label for="sex">Sex</label>
+        <select id="sex"><option value="M">Male</option><option value="F" selected>Female</option></select>
+      </div>
+      <div class="form-group"><label for="scr">Scr (mg/dL)</label><input id="scr" type="number" step="0.1" value="1.3"/></div>
+    </div>
+
+    <!-- 2. Dosing -->
+    <h2 class="section-title">2. Dosing (PO)</h2>
+    <div class="form-grid">
+      <div class="form-group"><label for="dose">Dose (µg)</label><input id="dose" type="number" value="62.5"/></div>
+      <div class="form-group"><label for="tau">Interval τ (h)</label><input id="tau" type="number" value="48"/></div>
+      <div class="form-group"><label for="nDoses">No. of doses</label><input id="nDoses" type="number" value="10"/></div>
+    </div>
+
+    <!-- 3. TDM -->
+    <h2 class="section-title">3. TDM Data <span style="font-weight:400;color:#6b7280">(optional)</span></h2>
+    <p class="tdm-hint">Hours after <b>last</b> dose &amp; observed concentration. Leave blank to skip.</p>
+    <div class="form-grid" style="margin-top:6px">
+      <div class="form-group"><label>t₁ post-dose (h)</label><input id="tdm1T" type="number" step="0.5" placeholder="e.g. 12"/></div>
+      <div class="form-group"><label>C₁ (ng/mL)</label><input id="tdm1C" type="number" step="0.01" placeholder="e.g. 0.8"/></div>
+      <div class="form-group"><label>t₂ post-dose (h)</label><input id="tdm2T" type="number" step="0.5" placeholder=""/></div>
+      <div class="form-group"><label>C₂ (ng/mL)</label><input id="tdm2C" type="number" step="0.01" placeholder=""/></div>
+    </div>
+
+    <!-- 4. Clinical context -->
+    <h2 class="section-title">4. Clinical Context</h2>
+    <div class="form-grid">
+      <div class="form-group"><label for="potassium">Serum K⁺ (mEq/L)</label><input id="potassium" type="number" step="0.1" value="4.0"/></div>
+      <div class="form-group"><label for="ddi">P-gp Inhibitor</label>
+        <select id="ddi">
+          <option value="none">None</option>
+          <option value="amiodarone">Amiodarone</option>
+          <option value="verapamil">Verapamil</option>
+          <option value="quinidine">Quinidine</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="button" id="runBtn">▶ Run Simulation</button>
+  </aside>
+
+  <!-- ════════════════ MAIN ════════════════ -->
+  <main class="main">
+    <!-- Header -->
+    <div class="main-top">
+      <div>
+        <div class="chart-title">Simulation Summary</div>
+        <div class="chart-subtitle">PopPK two-compartment · Monte Carlo 95 % prediction interval · patient vs healthy-adult reference</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">CrCl (Cockcroft–Gault)</div><div class="stat-value" id="sCrCl">–</div><div class="stat-tag">mL/min</div></div>
+        <div class="stat-card"><div class="stat-label">Terminal t½ (β-phase)</div><div class="stat-value" id="sThalf">–</div><div class="stat-tag">hours</div></div>
+        <div class="stat-card"><div class="stat-label">Cmax,ss (patient)</div><div class="stat-value" id="sCmax">–</div><div class="stat-tag">ng/mL</div></div>
+        <div class="stat-card"><div class="stat-label">Cmin,ss (patient)</div><div class="stat-value" id="sCmin">–</div><div class="stat-tag">ng/mL</div></div>
+        <div class="stat-card"><div class="stat-label">P(target attainment)</div><div class="stat-value" id="sPTA">–</div><div class="stat-tag">MC 500 subjects · 0.5–1.0 ng/mL</div></div>
+        <div class="stat-card"><div class="stat-label">P(Cmax &gt; 2 ng/mL)</div><div class="stat-value" id="sPtox">–</div><div class="stat-tag">MC toxicity probability</div></div>
+      </div>
+    </div>
+
+    <!-- Alerts (injected) -->
+    <div id="alertsPanel" class="alerts-panel"></div>
+
+    <!-- Interpretation -->
+    <div class="explain-card">
+      <div class="explain-title">Explainable Clinical Interpretation</div>
+      <p class="explain-body" id="explainText">Enter patient data and click <b>Run Simulation</b>.</p>
+    </div>
+
+    <!-- Bayesian MAP (hidden initially) -->
+    <div class="explain-card" id="bayesCard" style="display:none">
+      <div class="explain-title">Bayesian MAP Individualisation</div>
+      <p class="explain-body" id="bayesText"></p>
+      <div class="metrics-grid" id="bayesMetrics" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Chart -->
+    <section class="chart-card">
+      <div class="chart-title">Concentration–Time Curve (repeated PO Digoxin)</div>
+      <div class="chart-subtitle">
+        Green band = 95 % prediction interval (IIV, N&thinsp;=&thinsp;500) · Solid green = population median ·
+        Orange = Bayesian MAP individual · Dashed blue = healthy-adult reference ·
+        Red dots = TDM observations
+      </div>
+      <div class="chart-wrapper"><canvas id="pkChart"></canvas></div>
+    </section>
+
+    <!-- Dose optimisation -->
+    <div class="explain-card">
+      <div class="explain-title">MC-Based Precision Dosing Suggestions</div>
+      <p class="explain-body">
+        Grid search over common PO regimens (62.5–250&nbsp;µg, q24–48 h). Each regimen scored by
+        probability of target attainment (PTA: 0.5–1.0&nbsp;ng/mL Cmin,ss) from 200 virtual patients.
+        <b>Educational only — not medical advice.</b>
+      </p>
+      <div id="optTableWrapper" style="margin-top:6px"></div>
+    </div>
+
+    <!-- Validation (only if TDM) -->
+    <div class="explain-card" id="validCard" style="display:none">
+      <div class="explain-title">Prediction-Error Metrics (Individual Validation)</div>
+      <p class="explain-body" id="validText"></p>
+      <div class="metrics-grid" id="validMetrics" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Model Card (collapsible) -->
+    <details>
+      <summary>📋 Model Card &amp; References</summary>
+      <div class="model-card-body">
+        <p><b>Architecture:</b> Two-compartment first-order oral absorption, Euler integration (Δt&thinsp;=&thinsp;0.2&thinsp;h).</p>
+        <table>
+          <thead><tr><th>Parameter</th><th>Typical</th><th>Covariate Scaling</th><th>IIV ω²</th></tr></thead>
+          <tbody>
+            <tr><td>CL</td><td>6.0 L/h</td><td>(CrCl/80)^1.0 × (WT/70)^0.75</td><td>0.09 (~30 % CV)</td></tr>
+            <tr><td>V1</td><td>30.0 L</td><td>(WT/70)^1.0</td><td>0.04 (~20 % CV)</td></tr>
+            <tr><td>V2</td><td>470.0 L</td><td>(WT/70)^1.0</td><td>0.04 (~20 % CV)</td></tr>
+            <tr><td>Q</td><td>6.0 L/h</td><td>(WT/70)^0.75</td><td>0.04 (~20 % CV)</td></tr>
+            <tr><td>ka</td><td>1.0 h⁻¹</td><td>–</td><td>–</td></tr>
+            <tr><td>F</td><td>0.70</td><td>DDI adjustment</td><td>–</td></tr>
+          </tbody>
+        </table>
+        <p><b>Residual error:</b> proportional, σ²&thinsp;=&thinsp;0.04 (~20 % CV, log-domain).</p>
+        <p><b>Bayesian MAP:</b> coordinate-descent grid search on η<sub>CL</sub> (and η<sub>V1</sub> if ≥ 2 TDM points).
+          Prior: log-normal IIV. Likelihood: proportional error.</p>
+        <p><b>Monte Carlo:</b> 500 virtual patients with IIV on CL, V1, V2, Q. PI = 5th–95th percentile.</p>
+        <p><b>DDI Education:</b> Amiodarone (CL×0.75), Verapamil (CL×0.70), Quinidine (CL×0.50) — simplified P-gp-inhibition models.</p>
+        <p><b>Validation status:</b> Internal consistency only. No external dataset evaluation.
+          Prediction-error metrics are shown when TDM data are entered.</p>
+        <p><b>Intended use:</b> Educational / portfolio demonstration of MIPD concepts.
+          <span style="color:#fca5a5"><b>NOT for clinical prescribing.</b></span></p>
+        <p style="margin-top:8px"><b>Key references</b></p>
+        <ol style="padding-left:16px;line-height:1.6">
+          <li>Jelliffe RW &amp; Brooker G. <i>J Chronic Dis</i> 1974;27(1):15-22.</li>
+          <li>Koup JR &amp; Green BL. <i>Clin Pharmacokinet</i> 1980;5(6):531-540.</li>
+          <li>Jusko WJ et al. <i>Clin Pharmacol Ther</i> 1978;24(1):28-35.</li>
+          <li>Brocks DR. <i>J Clin Pharm Ther</i> 2012;37(4):379-385.</li>
+          <li>Aronson JK. <i>Clin Pharmacokinet</i> 1980;5(2):167-179.</li>
+          <li>FDA Guidance: Population PK (2022). EMA Guideline on Reporting PopPK Analyses.</li>
+          <li>Holford NHG. Target concentration intervention. <i>Clin Pharmacokinet</i> 2012;51:261-279.</li>
+        </ol>
+      </div>
+    </details>
+
+    <footer>
+      ⚠️ Educational and portfolio demonstration only. Not validated for clinical use.
+      This simulator does not replace TDM, clinical judgement, or guideline-based prescribing.<br/>
+      © 2025 Goyeun Yun. All rights reserved.
+    </footer>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT ENGINE
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+/* ============================================================
+   1. CONSTANTS & CONFIGURATION
+   ============================================================ */
+// PopPK typical values (educational)
+const THETA_CL = 6.0,  THETA_V1 = 30.0, THETA_V2 = 470.0, THETA_Q = 6.0;
+// Covariate exponents
+const THETA_CL_CRCL = 1.0, THETA_CL_WT = 0.75;
+const THETA_V1_WT = 1.0,   THETA_V2_WT = 1.0, THETA_Q_WT = 0.75;
+// References
+const CRCL_REF = 80.0, WT_REF = 70.0;
+// Oral absorption
+const F_PO = 0.7, KA = 1.0;
+// Therapeutic range
+const THER_LOW = 0.5, THER_HIGH = 1.0;
+
+// IIV (log-normal, ω² = variance of η)
+const OMEGA_CL = 0.09;   // ~30 % CV
+const OMEGA_V1 = 0.04;   // ~20 % CV
+const OMEGA_V2 = 0.04;
+const OMEGA_Q  = 0.04;
+// Residual proportional error (in log-domain)
+const SIGMA_PROP = 0.04; // ~20 % CV
+
+// MC settings
+const N_MC     = 500;  // PI bands
+const N_MC_OPT = 200;  // dose optimisation
+
+// Adult reference
+const REF_AGE = 40, REF_WT = 70, REF_SEX = "M", REF_SCR = 0.9;
+
+// Optimisation grid
+const DOSE_GRID = [62.5, 125, 187.5, 250];
+const TAU_GRID  = [24, 36, 48];
+const N_OPT_DOSES = 20;
+
+// DDI factors (educational)
+const DDI_FACTORS = {
+  none:       { cl: 1.00, label: "–" },
+  amiodarone: { cl: 0.75, label: "Amiodarone (CL×0.75)" },
+  verapamil:  { cl: 0.70, label: "Verapamil (CL×0.70)" },
+  quinidine:  { cl: 0.50, label: "Quinidine (CL×0.50)" }
+};
+
+/* ============================================================
+   2. UTILITIES
+   ============================================================ */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function boxMullerRandn(rng) {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function quantileSorted(arr, q) {
+  if (arr.length === 0) return 0;
+  const pos = (arr.length - 1) * q;
+  const lo  = Math.floor(pos);
+  const hi  = Math.ceil(pos);
+  const frac = pos - lo;
+  return arr[lo] * (1 - frac) + arr[hi] * frac;
+}
+
+function simpleHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+  return Math.abs(h);
+}
+
+/* ============================================================
+   3. CREATININE CLEARANCE (Cockcroft–Gault)
+   ============================================================ */
+function creatinineClearance(age, weight, scr, sex) {
+  const f = sex === "F" ? 0.85 : 1.0;
+  return ((140 - age) * weight * f) / (72 * scr);
+}
+
+/* ============================================================
+   4. POPULATION PK PARAMETERS
+   ============================================================ */
+function poppkParams(age, weight, sex, scr, ddi) {
+  const crcl = creatinineClearance(age, weight, scr, sex);
+  let CL = THETA_CL * Math.pow(crcl / CRCL_REF, THETA_CL_CRCL)
+                     * Math.pow(weight / WT_REF, THETA_CL_WT);
+  CL *= DDI_FACTORS[ddi].cl;
+
+  const V1 = THETA_V1 * Math.pow(weight / WT_REF, THETA_V1_WT);
+  const V2 = THETA_V2 * Math.pow(weight / WT_REF, THETA_V2_WT);
+  const Q  = THETA_Q  * Math.pow(weight / WT_REF, THETA_Q_WT);
+
+  const k10 = CL / V1, k12 = Q / V1, k21 = Q / V2;
+  const disc = Math.sqrt(Math.pow(k10 + k12 + k21, 2) - 4 * k10 * k21);
+  const beta = 0.5 * ((k10 + k12 + k21) - disc);
+  const tHalf = Math.log(2) / beta;
+
+  return { CL, V1, V2, Q, crcl, tHalf };
+}
+
+/* ============================================================
+   5. TWO-COMPARTMENT PO SIMULATION (Euler)
+   ============================================================ */
+function simulate(dose, tau, nDoses, CL, V1, V2, Q, bioF, dt) {
+  const totalTime = tau * nDoses;
+  const nSteps = Math.floor(totalTime / dt) + 1;
+  const t = new Array(nSteps);
+  const C = new Array(nSteps);
+  let Agut = 0, A1 = 0, A2 = 0, nextD = 0;
+
+  for (let i = 0; i < nSteps; i++) {
+    const ti = i * dt;
+    while (nextD < nDoses && ti >= nextD * tau - 1e-9) { Agut += dose * bioF; nextD++; }
+    t[i] = ti;
+    C[i] = A1 / V1;
+
+    const dAgut = -KA * Agut;
+    const dA1 = KA * Agut - (CL / V1) * A1 - (Q / V1) * A1 + (Q / V2) * A2;
+    const dA2 = (Q / V1) * A1 - (Q / V2) * A2;
+    Agut += dAgut * dt;
+    A1   += dA1   * dt;
+    A2   += dA2   * dt;
+  }
+  return { t, C };
+}
+
+/* ============================================================
+   6. EXPOSURE SUMMARY
+   ============================================================ */
+function summarizeExposure(t, C, tau) {
+  const cmax = Math.max(...C);
+  const steadyStart = t[t.length - 1] - tau;
+  let cmin = Infinity;
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] >= steadyStart && C[i] < cmin) cmin = C[i];
+  }
+  if (!isFinite(cmin)) cmin = Math.min(...C);
+  return { cmax, cmin };
+}
+
+/* ============================================================
+   7. MONTE CARLO ENGINE
+   ============================================================ */
+function monteCarloSim(dose, tau, nDoses, popPk, nSim, ddi, seed) {
+  const rng = mulberry32(seed);
+  const dt = 0.2;
+  const totalTime = tau * nDoses;
+  const nSteps = Math.floor(totalTime / dt) + 1;
+
+  // collect all concentrations for percentiles
+  // allC[step][sim]
+  const allC = [];
+  for (let i = 0; i < nSteps; i++) allC.push(new Float32Array(nSim));
+
+  const allCmin = new Float32Array(nSim);
+  const allCmax = new Float32Array(nSim);
+
+  for (let s = 0; s < nSim; s++) {
+    const etaCL = boxMullerRandn(rng) * Math.sqrt(OMEGA_CL);
+    const etaV1 = boxMullerRandn(rng) * Math.sqrt(OMEGA_V1);
+    const etaV2 = boxMullerRandn(rng) * Math.sqrt(OMEGA_V2);
+    const etaQ  = boxMullerRandn(rng) * Math.sqrt(OMEGA_Q);
+
+    const CL_i = popPk.CL * Math.exp(etaCL);
+    const V1_i = popPk.V1 * Math.exp(etaV1);
+    const V2_i = popPk.V2 * Math.exp(etaV2);
+    const Q_i  = popPk.Q  * Math.exp(etaQ);
+
+    // DDI is already applied in popPk.CL, so individual CL inherits it. bioF stays F_PO.
+    const simI = simulate(dose, tau, nDoses, CL_i, V1_i, V2_i, Q_i, F_PO, dt);
+    const len = Math.min(nSteps, simI.C.length);
+    for (let i = 0; i < len; i++) allC[i][s] = simI.C[i];
+
+    const exp = summarizeExposure(simI.t, simI.C, tau);
+    allCmin[s] = exp.cmin;
+    allCmax[s] = exp.cmax;
+  }
+
+  // percentiles at each step
+  const tGrid   = new Array(nSteps);
+  const median   = new Array(nSteps);
+  const lower5   = new Array(nSteps);
+  const upper95  = new Array(nSteps);
+  const buf = new Float32Array(nSim);
+
+  for (let i = 0; i < nSteps; i++) {
+    tGrid[i] = i * dt;
+    buf.set(allC[i]);
+    buf.sort();
+    const sorted = Array.from(buf);
+    lower5[i]  = quantileSorted(sorted, 0.05);
+    median[i]  = quantileSorted(sorted, 0.50);
+    upper95[i] = quantileSorted(sorted, 0.95);
+  }
+
+  // target attainment
+  let ptaCount = 0, toxCount = 0;
+  for (let s = 0; s < nSim; s++) {
+    if (allCmin[s] >= THER_LOW && allCmin[s] <= THER_HIGH) ptaCount++;
+    if (allCmax[s] > 2.0) toxCount++;
+  }
+  const pta   = (ptaCount / nSim * 100);
+  const pTox  = (toxCount / nSim * 100);
+
+  return { t: tGrid, median, lower5, upper95, pta, pTox };
+}
+
+/* ============================================================
+   8. BAYESIAN MAP ESTIMATION
+   ============================================================ */
+function mapOFV(etaCL, etaV1, popPk, tdmAbs, dose, tau, nDoses) {
+  const CL_i = popPk.CL * Math.exp(etaCL);
+  const V1_i = popPk.V1 * Math.exp(etaV1);
+  const sim  = simulate(dose, tau, nDoses, CL_i, V1_i, popPk.V2, popPk.Q, F_PO, 0.25);
+
+  // prior
+  let ofv = (etaCL * etaCL) / OMEGA_CL + (etaV1 * etaV1) / OMEGA_V1;
+
+  // likelihood (log-domain proportional)
+  for (const obs of tdmAbs) {
+    // find Cpred at obs.time (linear interpolation)
+    let cpred = 0;
+    for (let j = 0; j < sim.t.length - 1; j++) {
+      if (sim.t[j] <= obs.time && sim.t[j + 1] >= obs.time) {
+        const frac = (obs.time - sim.t[j]) / (sim.t[j + 1] - sim.t[j]);
+        cpred = sim.C[j] + frac * (sim.C[j + 1] - sim.C[j]);
+        break;
+      }
+    }
+    if (cpred < 1e-12) cpred = 1e-12;
+    ofv += Math.pow(Math.log(obs.conc) - Math.log(cpred), 2) / SIGMA_PROP;
+  }
+  return ofv;
+}
+
+function bayesianMAP(tdmAbs, popPk, dose, tau, nDoses) {
+  const rangeCL = 3.0 * Math.sqrt(OMEGA_CL);
+  const rangeV1 = 3.0 * Math.sqrt(OMEGA_V1);
+  let etaCL = 0, etaV1 = 0;
+
+  const nIter = 3;
+  const nGrid = 101;
+
+  for (let iter = 0; iter < nIter; iter++) {
+    // optimise η_CL
+    let bestCL = etaCL, bestOFV = Infinity;
+    for (let i = 0; i < nGrid; i++) {
+      const eta = -rangeCL + (2 * rangeCL * i) / (nGrid - 1);
+      const ofv = mapOFV(eta, etaV1, popPk, tdmAbs, dose, tau, nDoses);
+      if (ofv < bestOFV) { bestOFV = ofv; bestCL = eta; }
+    }
+    etaCL = bestCL;
+
+    // optimise η_V1 (only meaningful with ≥2 TDM)
+    if (tdmAbs.length >= 2) {
+      let bestV1 = etaV1; bestOFV = Infinity;
+      for (let i = 0; i < nGrid; i++) {
+        const eta = -rangeV1 + (2 * rangeV1 * i) / (nGrid - 1);
+        const ofv = mapOFV(etaCL, eta, popPk, tdmAbs, dose, tau, nDoses);
+        if (ofv < bestOFV) { bestOFV = ofv; bestV1 = eta; }
+      }
+      etaV1 = bestV1;
+    }
+  }
+
+  const CL_i = popPk.CL * Math.exp(etaCL);
+  const V1_i = popPk.V1 * Math.exp(etaV1);
+  const tHalf_i = (() => {
+    const k10 = CL_i / V1_i, k12 = popPk.Q / V1_i, k21 = popPk.Q / popPk.V2;
+    const disc = Math.sqrt(Math.pow(k10 + k12 + k21, 2) - 4 * k10 * k21);
+    return Math.log(2) / (0.5 * ((k10 + k12 + k21) - disc));
+  })();
+
+  return { etaCL, etaV1, CL_i, V1_i, tHalf_i };
+}
+
+/* ============================================================
+   9. PREDICTION-ERROR METRICS
+   ============================================================ */
+function predictionMetrics(tdmAbs, popPk, mapResult, dose, tau, nDoses) {
+  const CL_i = mapResult.CL_i;
+  const V1_i = mapResult.V1_i;
+  const simPop = simulate(dose, tau, nDoses, popPk.CL, popPk.V1, popPk.V2, popPk.Q, F_PO, 0.1);
+  const simInd = simulate(dose, tau, nDoses, CL_i, V1_i, popPk.V2, popPk.Q, F_PO, 0.1);
+
+  function cpredAt(sim, time) {
+    for (let j = 0; j < sim.t.length - 1; j++) {
+      if (sim.t[j] <= time && sim.t[j + 1] >= time) {
+        const frac = (time - sim.t[j]) / (sim.t[j + 1] - sim.t[j]);
+        return sim.C[j] + frac * (sim.C[j + 1] - sim.C[j]);
+      }
+    }
+    return sim.C[sim.C.length - 1];
+  }
+
+  const popPEs = [], indPEs = [];
+  for (const obs of tdmAbs) {
+    const cpPop = cpredAt(simPop, obs.time);
+    const cpInd = cpredAt(simInd, obs.time);
+    popPEs.push({ pe: cpPop - obs.conc, pePct: ((cpPop - obs.conc) / obs.conc) * 100 });
+    indPEs.push({ pe: cpInd - obs.conc, pePct: ((cpInd - obs.conc) / obs.conc) * 100 });
+  }
+
+  function metrics(arr) {
+    const n = arr.length;
+    const me  = arr.reduce((s, x) => s + x.pe, 0) / n;
+    const mae = arr.reduce((s, x) => s + Math.abs(x.pe), 0) / n;
+    const rmse = Math.sqrt(arr.reduce((s, x) => s + x.pe * x.pe, 0) / n);
+    const mpe  = arr.reduce((s, x) => s + x.pePct, 0) / n;
+    return { me, mae, rmse, mpe };
+  }
+
+  return { pop: metrics(popPEs), ind: metrics(indPEs) };
+}
+
+/* ============================================================
+   10. CLINICAL ALERTS ENGINE
+   ============================================================ */
+function generateAlerts(patientPk, cmax, cmin, potassium, ddi, tdmPts) {
+  const alerts = [];
+  const crcl = patientPk.crcl;
+
+  if (crcl < 30) {
+    alerts.push({ level: "danger", msg: `Severe renal impairment (CrCl ${crcl.toFixed(1)} mL/min < 30). Digoxin clearance is markedly reduced — high accumulation risk. Consider extended intervals (≥48 h) or dose reduction.` });
+  } else if (crcl < 50) {
+    alerts.push({ level: "warning", msg: `Moderate renal impairment (CrCl ${crcl.toFixed(1)} mL/min). Digoxin clearance will be reduced; monitor trough levels closely.` });
+  }
+
+  if (potassium < 3.0) {
+    alerts.push({ level: "danger", msg: `Severe hypokalaemia (K⁺ ${potassium.toFixed(1)} mEq/L). Even therapeutic digoxin levels can provoke arrhythmia. Correct K⁺ urgently.` });
+  } else if (potassium < 3.5) {
+    alerts.push({ level: "warning", msg: `Hypokalaemia (K⁺ ${potassium.toFixed(1)} mEq/L) increases myocardial sensitivity to digoxin. Monitor and supplement.` });
+  }
+
+  if (ddi !== "none") {
+    alerts.push({ level: "warning", msg: `P-gp inhibitor: ${DDI_FACTORS[ddi].label}. Expected ↑ digoxin exposure; CL adjusted in model.` });
+  }
+
+  for (const pt of tdmPts) {
+    if (pt.tPostDose < 6) {
+      alerts.push({ level: "info", msg: `TDM at ${pt.tPostDose} h post-dose is within the distribution phase (< 6 h). Concentration may overestimate steady-state tissue levels. Interpret cautiously.` });
+    }
+  }
+
+  if (cmax > 2.0) {
+    alerts.push({ level: "danger", msg: `Predicted Cmax,ss ${cmax.toFixed(2)} ng/mL exceeds 2.0 ng/mL — significant toxicity risk (arrhythmia, visual disturbances, GI symptoms).` });
+  } else if (cmin > THER_HIGH) {
+    alerts.push({ level: "warning", msg: `Cmin,ss ${cmin.toFixed(2)} ng/mL exceeds the illustrative upper bound (${THER_HIGH} ng/mL). Accumulation probable; consider dose reduction.` });
+  }
+
+  if (cmin < THER_LOW && cmax < THER_LOW) {
+    alerts.push({ level: "info", msg: `Both Cmax and Cmin are below ${THER_LOW} ng/mL — may be sub-therapeutic. Consider dose increase or shorter interval.` });
+  }
+
+  return alerts;
+}
+
+/* ============================================================
+   11. MC-BASED DOSE OPTIMISATION
+   ============================================================ */
+function doseOptimizationMC(popPk, ddi, seed) {
+  const results = [];
+  const rng = mulberry32(seed + 9999);
+
+  // Pre-generate random effects for reuse
+  const etas = [];
+  for (let s = 0; s < N_MC_OPT; s++) {
+    etas.push({
+      cl: boxMullerRandn(rng) * Math.sqrt(OMEGA_CL),
+      v1: boxMullerRandn(rng) * Math.sqrt(OMEGA_V1),
+      v2: boxMullerRandn(rng) * Math.sqrt(OMEGA_V2),
+      q:  boxMullerRandn(rng) * Math.sqrt(OMEGA_Q)
+    });
+  }
+
+  for (const d of DOSE_GRID) {
+    for (const tau of TAU_GRID) {
+      let ptaCount = 0, safeCount = 0;
+      for (let s = 0; s < N_MC_OPT; s++) {
+        const CL_i = popPk.CL * Math.exp(etas[s].cl);
+        const V1_i = popPk.V1 * Math.exp(etas[s].v1);
+        const V2_i = popPk.V2 * Math.exp(etas[s].v2);
+        const Q_i  = popPk.Q  * Math.exp(etas[s].q);
+
+        const sim = simulate(d, tau, N_OPT_DOSES, CL_i, V1_i, V2_i, Q_i, F_PO, 0.5);
+        const exp = summarizeExposure(sim.t, sim.C, tau);
+        if (exp.cmin >= THER_LOW && exp.cmin <= THER_HIGH) ptaCount++;
+        if (exp.cmax <= 2.0) safeCount++;
+      }
+      const pta = ptaCount / N_MC_OPT * 100;
+      const pSafe = safeCount / N_MC_OPT * 100;
+      // Median exposure for display
+      const simMed = simulate(d, tau, N_OPT_DOSES, popPk.CL, popPk.V1, popPk.V2, popPk.Q, F_PO, 0.5);
+      const expMed = summarizeExposure(simMed.t, simMed.C, tau);
+      results.push({ dose: d, tau, pta, pSafe, cmax: expMed.cmax, cmin: expMed.cmin });
+    }
+  }
+
+  results.sort((a, b) => b.pta - a.pta || a.pSafe - b.pSafe);
+  return results.slice(0, 5);
+}
+
+/* ============================================================
+   12. CHART.JS INIT & UPDATE
+   ============================================================ */
+let chartInstance = null;
+
+function initChart() {
+  const ctx = document.getElementById("pkChart").getContext("2d");
+  chartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        { // 0 — PI lower (5th)
+          label: "95% PI lower",
+          data: [],
+          fill: "+1",
+          backgroundColor: "rgba(74,222,128,0.07)",
+          borderColor: "rgba(74,222,128,0.22)",
+          borderWidth: 1,
+          pointRadius: 0,
+          tension: 0.15
+        },
+        { // 1 — PI upper (95th)
+          label: "95% PI upper",
+          data: [],
+          fill: false,
+          borderColor: "rgba(74,222,128,0.22)",
+          borderWidth: 1,
+          pointRadius: 0,
+          tension: 0.15
+        },
+        { // 2 — Population median
+          label: "Population median",
+          data: [],
+          borderColor: "#4ade80",
+          borderWidth: 2.5,
+          pointRadius: 0,
+          tension: 0.15
+        },
+        { // 3 — Bayesian MAP individual
+          label: "Bayesian MAP individual",
+          data: [],
+          borderColor: "#fb923c",
+          borderWidth: 2.5,
+          pointRadius: 0,
+          tension: 0.15,
+          hidden: true
+        },
+        { // 4 — Adult reference
+          label: "Healthy-adult reference",
+          data: [],
+          borderColor: "#38bdf8",
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          tension: 0.15
+        },
+        { // 5 — TDM observations
+          label: "TDM observations",
+          data: [],
+          showLine: false,
+          pointRadius: 7,
+          pointBackgroundColor: "#ef4444",
+          pointBorderColor: "#fecaca",
+          pointBorderWidth: 2,
+          pointStyle: "circle"
+        },
+        { // 6 — Therapeutic lower
+          label: "Therapeutic lower (0.5 ng/mL)",
+          data: [],
+          borderColor: "rgba(248,113,113,0.6)",
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          tension: 0
+        },
+        { // 7 — Therapeutic upper
+          label: "Therapeutic upper (1.0 ng/mL)",
+          data: [],
+          borderColor: "rgba(248,113,113,0.6)",
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: {
+          title: { display: true, text: "Time (h)", color: "#9ca3af" },
+          ticks: {
+            color: "#9ca3af",
+            maxTicksLimit: 16,
+            callback: v => typeof v === "number" ? v.toFixed(0) : v
+          },
+          grid: { color: "rgba(148,163,184,0.15)" }
+        },
+        y: {
+          min: 0,
+          title: { display: true, text: "Concentration (ng/mL)", color: "#9ca3af" },
+          ticks: { color: "#9ca3af" },
+          grid: { color: "rgba(148,163,184,0.15)" }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: "#e5e7eb", usePointStyle: true, pointStyleWidth: 14, font: { size: 11 } } },
+        filler: { propagate: true }
+      }
+    }
+  });
+}
+
+function updateChart(mcResult, patientSim, refSim, tdmChartPts, bayesSim) {
+  if (!chartInstance) return;
+  const labels = mcResult.t;
+
+  // align patient & ref to MC time grid (they use dt=0.2 so same length)
+  chartInstance.data.labels = labels;
+  chartInstance.data.datasets[0].data = mcResult.lower5;
+  chartInstance.data.datasets[1].data = mcResult.upper95;
+  chartInstance.data.datasets[2].data = mcResult.median;
+
+  // Bayesian MAP
+  if (bayesSim) {
+    chartInstance.data.datasets[3].data = bayesSim.C;
+    chartInstance.data.datasets[3].hidden = false;
+  } else {
+    chartInstance.data.datasets[3].data = [];
+    chartInstance.data.datasets[3].hidden = true;
+  }
+
+  chartInstance.data.datasets[4].data = refSim.C;
+
+  // TDM scatter: array of nulls except at TDM indices
+  const tdmArr = new Array(labels.length).fill(null);
+  for (const pt of tdmChartPts) {
+    let best = 0, diff = Infinity;
+    for (let i = 0; i < labels.length; i++) {
+      const d = Math.abs(labels[i] - pt.absTime);
+      if (d < diff) { diff = d; best = i; }
+    }
+    tdmArr[best] = pt.conc;
+  }
+  chartInstance.data.datasets[5].data = tdmArr;
+
+  chartInstance.data.datasets[6].data = labels.map(() => THER_LOW);
+  chartInstance.data.datasets[7].data = labels.map(() => THER_HIGH);
+
+  chartInstance.update();
+}
+
+/* ============================================================
+   13. UI RENDERING HELPERS
+   ============================================================ */
+function renderAlerts(alerts) {
+  const panel = document.getElementById("alertsPanel");
+  if (!alerts.length) { panel.innerHTML = ""; return; }
+  const icons = { danger: "🔴", warning: "🟡", info: "🔵" };
+  const cls   = { danger: "alert-danger", warning: "alert-warning", info: "alert-info" };
+  panel.innerHTML = alerts.map(a =>
+    `<div class="alert-card ${cls[a.level]}"><span class="icon">${icons[a.level]}</span><span>${a.msg}</span></div>`
+  ).join("");
+}
+
+function renderOptTable(regimens) {
+  const w = document.getElementById("optTableWrapper");
+  if (!regimens.length) { w.innerHTML = "<i>No regimens within safety filters.</i>"; return; }
+  let h = `<table class="dose-table"><thead><tr>
+    <th>#</th><th>Dose (µg)</th><th>τ (h)</th><th>Cmax,ss</th><th>Cmin,ss</th>
+    <th>PTA (%)</th><th>P(safe) (%)</th><th>Label</th></tr></thead><tbody>`;
+  regimens.forEach((r, i) => {
+    const lbl = r.pta >= 60
+      ? `<span class="pill-safe">Favourable</span>`
+      : r.pta >= 30
+        ? `<span class="pill-low">Marginal</span>`
+        : `<span class="pill-high">Poor</span>`;
+    h += `<tr><td>${i + 1}</td><td>${r.dose}</td><td>${r.tau}</td>
+      <td>${r.cmax.toFixed(2)}</td><td>${r.cmin.toFixed(2)}</td>
+      <td>${r.pta.toFixed(0)}</td><td>${r.pSafe.toFixed(0)}</td><td>${lbl}</td></tr>`;
+  });
+  h += "</tbody></table>";
+  w.innerHTML = h;
+}
+
+function renderBayesian(mapRes, metrics) {
+  const card = document.getElementById("bayesCard");
+  card.style.display = "block";
+
+  document.getElementById("bayesText").innerHTML =
+    `<b>MAP estimates:</b> η<sub>CL</sub>&thinsp;=&thinsp;${mapRes.etaCL.toFixed(3)}, `
+    + `η<sub>V1</sub>&thinsp;=&thinsp;${mapRes.etaV1.toFixed(3)}<br/>`
+    + `Individual CL&thinsp;=&thinsp;${mapRes.CL_i.toFixed(2)} L/h, `
+    + `V1&thinsp;=&thinsp;${mapRes.V1_i.toFixed(1)} L, `
+    + `t½β&thinsp;=&thinsp;${mapRes.tHalf_i.toFixed(1)} h`;
+
+  document.getElementById("bayesMetrics").innerHTML = "";
+}
+
+function renderValidation(metrics) {
+  const card = document.getElementById("validCard");
+  card.style.display = "block";
+  document.getElementById("validText").innerHTML =
+    "Population (prior) vs Bayesian MAP (posterior) prediction-error comparison for the supplied TDM observations.";
+
+  const g = document.getElementById("validMetrics");
+  g.innerHTML = `
+    <div class="metric-card"><div class="metric-label">Pop ME (bias)</div><div class="metric-value">${metrics.pop.me.toFixed(3)}</div></div>
+    <div class="metric-card"><div class="metric-label">Pop RMSE</div><div class="metric-value">${metrics.pop.rmse.toFixed(3)}</div></div>
+    <div class="metric-card"><div class="metric-label">MAP ME (bias)</div><div class="metric-value" style="color:#4ade80">${metrics.ind.me.toFixed(3)}</div></div>
+    <div class="metric-card"><div class="metric-label">MAP RMSE</div><div class="metric-value" style="color:#4ade80">${metrics.ind.rmse.toFixed(3)}</div></div>`;
+}
+
+/* ============================================================
+   14. MAIN SIMULATION DRIVER
+   ============================================================ */
+function runSimulation() {
+  // Read inputs
+  const age    = parseFloat(document.getElementById("age").value);
+  const weight = parseFloat(document.getElementById("weight").value);
+  const sex    = document.getElementById("sex").value;
+  const scr    = parseFloat(document.getElementById("scr").value);
+  const dose   = parseFloat(document.getElementById("dose").value);
+  const tau    = parseFloat(document.getElementById("tau").value);
+  const nDoses = parseInt(document.getElementById("nDoses").value, 10);
+  const potassium = parseFloat(document.getElementById("potassium").value) || 4.0;
+  const ddi    = document.getElementById("ddi").value;
+
+  if ([age, weight, scr, dose, tau, nDoses].some(v => !isFinite(v)) || tau <= 0 || nDoses <= 0) {
+    alert("Please check all input values."); return;
+  }
+
+  // TDM
+  const tdmPts = [];
+  for (let i = 1; i <= 2; i++) {
+    const tVal = parseFloat(document.getElementById(`tdm${i}T`).value);
+    const cVal = parseFloat(document.getElementById(`tdm${i}C`).value);
+    if (isFinite(tVal) && isFinite(cVal) && tVal >= 0 && cVal > 0) {
+      tdmPts.push({ tPostDose: tVal, conc: cVal });
+    }
+  }
+
+  // Convert TDM to absolute times (relative to last dose)
+  const lastDoseTime = (nDoses - 1) * tau;
+  const tdmAbs = tdmPts.map(p => ({ time: lastDoseTime + p.tPostDose, conc: p.conc, tPostDose: p.tPostDose }));
+
+  // Population PK
+  const popPk = poppkParams(age, weight, sex, scr, ddi);
+  const refPk = poppkParams(REF_AGE, REF_WT, REF_SEX, REF_SCR, "none");
+
+  // Deterministic simulation (dt 0.2)
+  const dt = 0.2;
+  const patientSim = simulate(dose, tau, nDoses, popPk.CL, popPk.V1, popPk.V2, popPk.Q, F_PO, dt);
+  const refSim     = simulate(dose, tau, nDoses, refPk.CL, refPk.V1, refPk.V2, refPk.Q, F_PO, dt);
+  const { cmax, cmin } = summarizeExposure(patientSim.t, patientSim.C, tau);
+
+  // Monte Carlo
+  const seed = simpleHash(`${age}_${weight}_${sex}_${scr}_${ddi}`);
+  const mc = monteCarloSim(dose, tau, nDoses, popPk, N_MC, ddi, seed);
+
+  // Stats
+  document.getElementById("sCrCl").textContent  = popPk.crcl.toFixed(1);
+  document.getElementById("sThalf").textContent = popPk.tHalf.toFixed(1);
+  document.getElementById("sCmax").textContent  = cmax.toFixed(2);
+  document.getElementById("sCmin").textContent  = cmin.toFixed(2);
+  document.getElementById("sPTA").textContent   = mc.pta.toFixed(0) + " %";
+  document.getElementById("sPtox").textContent  = mc.pTox.toFixed(0) + " %";
+
+  // Alerts
+  const alerts = generateAlerts(popPk, cmax, cmin, potassium, ddi, tdmPts);
+  renderAlerts(alerts);
+
+  // Interpretation
+  const el = document.getElementById("explainText");
+  if (cmin < THER_LOW && cmax < THER_HIGH) {
+    el.textContent = `This patient's steady-state trough (Cmin,ss = ${cmin.toFixed(2)} ng/mL) is below `
+      + `the illustrative therapeutic lower bound (${THER_LOW} ng/mL). With CrCl ≈ `
+      + `${popPk.crcl.toFixed(1)} mL/min and t½β ≈ ${popPk.tHalf.toFixed(0)} h, this pattern suggests `
+      + `subtherapeutic exposure. The 95 % prediction interval and PTA of ${mc.pta.toFixed(0)} % further `
+      + `indicate that most virtual patients would also be under-exposed at this regimen. `
+      + `A higher dose or shorter interval may be warranted, guided by TDM and clinical response.`;
+  } else if (cmax > THER_HIGH) {
+    el.textContent = `Cmax,ss ≈ ${cmax.toFixed(2)} ng/mL exceeds the illustrative upper bound `
+      + `(${THER_HIGH} ng/mL), with Cmin,ss = ${cmin.toFixed(2)} ng/mL. With CrCl ≈ `
+      + `${popPk.crcl.toFixed(1)} mL/min and t½β ≈ ${popPk.tHalf.toFixed(0)} h, accumulation is likely. `
+      + `Monte Carlo analysis shows ${mc.pTox.toFixed(0)} % of virtual patients would reach Cmax > 2 ng/mL `
+      + `(toxicity zone). Dose reduction or interval extension would typically be considered.`;
+  } else {
+    el.textContent = `Cmin,ss = ${cmin.toFixed(2)} ng/mL lies within the illustrative therapeutic window `
+      + `(${THER_LOW}–${THER_HIGH} ng/mL), with peaks around ${cmax.toFixed(2)} ng/mL. `
+      + `PTA ≈ ${mc.pta.toFixed(0)} % supports this regimen for most similar patients. `
+      + `However, individualised TDM and clinical monitoring remain essential—especially in `
+      + `geriatric patients with CrCl ≈ ${popPk.crcl.toFixed(1)} mL/min.`;
+  }
+
+  // Bayesian MAP (if TDM available)
+  let bayesSim = null;
+  if (tdmAbs.length > 0) {
+    const mapRes = bayesianMAP(tdmAbs, popPk, dose, tau, nDoses);
+    const bayesSimFull = simulate(dose, tau, nDoses, mapRes.CL_i, mapRes.V1_i, popPk.V2, popPk.Q, F_PO, dt);
+    bayesSim = bayesSimFull;
+    renderBayesian(mapRes, null);
+
+    // Validation metrics
+    const valMetrics = predictionMetrics(tdmAbs, popPk, mapRes, dose, tau, nDoses);
+    renderValidation(valMetrics);
+  } else {
+    document.getElementById("bayesCard").style.display = "none";
+    document.getElementById("validCard").style.display = "none";
+  }
+
+  // Chart
+  const tdmChartPts = tdmAbs.map(p => ({ absTime: p.time, conc: p.conc }));
+  updateChart(mc, patientSim, refSim, tdmChartPts, bayesSim);
+
+  // Dose optimisation
+  const optRegimens = doseOptimizationMC(popPk, ddi, seed);
+  renderOptTable(optRegimens);
+}
+
+/* ============================================================
+   15. BOOTSTRAP
+   ============================================================ */
+window.addEventListener("DOMContentLoaded", () => {
+  initChart();
+  document.getElementById("runBtn").addEventListener("click", runSimulation);
+  runSimulation();
+});
+</script>
+</body>
+</html>
