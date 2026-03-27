@@ -1,4 +1,4 @@
-# Explainable Geriatric Digoxin PK Digital Twin Prototype
+# Explainable Geriatric Digoxin PK Simulator Prototype
 
 **An explainable, patient-specific pharmacokinetic simulator for safer digoxin dosing in older adults.**
 
