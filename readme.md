@@ -8,6 +8,14 @@ It is designed to show why **one-size-fits-all dosing can fail in geriatric pati
 
 ---
 
+## Live Demo
+
+- https://goneyak.github.io/explainable-geriatric-digoxin-pk-simulator/
+
+This repository is configured to deploy automatically to GitHub Pages on every push to `main`.
+
+---
+
 ## Why This Project Matters
 
 Digoxin has a **narrow therapeutic index**, meaning small increases in concentration can raise the risk of toxicity.
