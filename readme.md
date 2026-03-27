@@ -43,6 +43,8 @@ The simulator allows users to enter patient-specific information and compare the
 - concentration–time curve
 - steady-state exposure metrics
 - exposure category and interpretation
+- prior vs posterior prediction-error metrics when TDM points are supplied
+- synthetic benchmark summary for internal regression testing
 
 ---
 
@@ -55,7 +57,8 @@ A simplified educational PK model for demonstrating the basic impact of renal fu
 A more mechanistic population PK version with improved structure and dose optimization logic.
 
 ### `version_3.html`
-The most advanced prototype, including richer clinical interpretation and a more complete precision-dosing workflow.
+The most advanced prototype, including richer clinical interpretation, synthetic benchmark scenarios,
+coarse-to-fine Bayesian MAP fitting, stronger mobile responsiveness, and a more complete precision-dosing workflow.
 
 ---
 
@@ -67,6 +70,17 @@ The most advanced prototype, including richer clinical interpretation and a more
 - Chart.js
 
 No backend or external server is required.
+
+---
+
+## Recent Improvements
+
+- corrected repository clone instructions
+- increased Monte Carlo uncertainty sampling in `version_3.html` for more stable tail-risk estimates
+- upgraded Bayesian MAP from a fixed grid pass to a coarse-to-fine coordinate search
+- added scenario-based synthetic benchmark cases for internal sanity checks and demos
+- improved narrow-screen/mobile layout for form controls, metrics, and tables
+- clarified that parameter values are literature-informed educational anchors rather than a validated bedside dosing model
 
 ---
 
@@ -104,7 +118,8 @@ It is intended for demonstration and educational purposes only.
 Current limitations include:
 
 - no external validation dataset  
-- simplified parameter assumptions  
+- synthetic benchmark cases only, not real-patient validation  
+- simplified parameter assumptions and didactic allometric scaling  
 - educational Bayesian / precision dosing logic  
 - not intended for real clinical decision-making  
 

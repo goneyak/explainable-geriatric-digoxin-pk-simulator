@@ -25,7 +25,11 @@
     .button{width:100%;margin-top:16px;padding:9px 12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-weight:600;font-size:.95rem;cursor:pointer;transition:transform .08s,box-shadow .08s;display:inline-flex;justify-content:center;align-items:center;gap:6px}
     .button:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(22,163,74,.45)}
     .button:active{transform:translateY(0);box-shadow:none}
+    .button-secondary{margin-top:8px;background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+    .button-secondary:hover{box-shadow:0 10px 22px rgba(37,99,235,.45)}
     .tdm-hint{font-size:.7rem;color:#6b7280;margin-top:2px}
+    .card-note{margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid #1f2937;background:rgba(15,23,42,.55);font-size:.73rem;line-height:1.4;color:#9ca3af}
+    .preset-grid{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px;align-items:end}
 
     /* ── Main ── */
     .main{padding:24px 28px 28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:100vh}
@@ -57,7 +61,8 @@
     .chart-wrapper{margin-top:8px;position:relative;height:340px;width:100%}
 
     /* Dose table */
-    .dose-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:.76rem}
+    .table-scroll{overflow-x:auto}
+    .dose-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:.76rem;min-width:620px}
     .dose-table th,.dose-table td{border-bottom:1px solid #1f2937;padding:4px 6px;text-align:center}
     .dose-table th{color:#e5e7eb;font-weight:500}
     .pill-safe{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.66rem;background:rgba(34,197,94,.18);color:#bbf7d0}
@@ -80,6 +85,19 @@
     details .model-card-body th{color:#e5e7eb;font-weight:500}
 
     footer{font-size:.65rem;color:#6b7280;margin-top:8px}
+
+    @media(max-width:720px){
+      body{padding:12px}
+      .container{border-radius:16px}
+      .sidebar,.main{max-height:none}
+      .sidebar{padding:18px}
+      .main{padding:18px;overflow-y:visible}
+      .form-grid,.preset-grid,.metrics-grid,.stats-grid{grid-template-columns:1fr}
+      input,select{max-width:none;width:100%}
+      .chart-wrapper{height:280px}
+      .badge{flex-wrap:wrap}
+      .chart-subtitle{line-height:1.45}
+    }
   </style>
 </head>
 
@@ -125,6 +143,21 @@
       <div class="form-group"><label>t₂ post-dose (h)</label><input id="tdm2T" type="number" step="0.5" placeholder=""/></div>
       <div class="form-group"><label>C₂ (ng/mL)</label><input id="tdm2C" type="number" step="0.01" placeholder=""/></div>
     </div>
+    <div class="card-note">
+      Load a scenario-based synthetic benchmark to inspect Bayesian updating and prediction-error behaviour.
+    </div>
+    <div class="preset-grid">
+      <div class="form-group" style="margin-top:8px">
+        <label for="benchmarkCase">Synthetic Benchmark Case</label>
+        <select id="benchmarkCase">
+          <option value="frail_renal">Frail renal impairment</option>
+          <option value="stable_trough">Stable maintenance trough</option>
+          <option value="ddi_accumulation">DDI accumulation risk</option>
+        </select>
+      </div>
+      <button class="button button-secondary" id="loadCaseBtn" type="button">Load Case</button>
+    </div>
+    <div class="tdm-hint" id="benchmarkCaseNote">Scenario-based internal benchmark. Not an external validation dataset.</div>
 
     <!-- 4. Clinical context -->
     <h2 class="section-title">4. Clinical Context</h2>
@@ -158,7 +191,7 @@
         <div class="stat-card"><div class="stat-label">Terminal t½ (β-phase)</div><div class="stat-value" id="sThalf">–</div><div class="stat-tag">hours</div></div>
         <div class="stat-card"><div class="stat-label">Cmax,ss (patient)</div><div class="stat-value" id="sCmax">–</div><div class="stat-tag">ng/mL</div></div>
         <div class="stat-card"><div class="stat-label">Cmin,ss (patient)</div><div class="stat-value" id="sCmin">–</div><div class="stat-tag">ng/mL</div></div>
-        <div class="stat-card"><div class="stat-label">P(target attainment)</div><div class="stat-value" id="sPTA">–</div><div class="stat-tag">MC 500 subjects · 0.5–1.0 ng/mL</div></div>
+        <div class="stat-card"><div class="stat-label">P(target attainment)</div><div class="stat-value" id="sPTA">–</div><div class="stat-tag">MC <span id="mcStatsN">1000</span> subjects · 0.5–1.0 ng/mL</div></div>
         <div class="stat-card"><div class="stat-label">P(Cmax &gt; 2 ng/mL)</div><div class="stat-value" id="sPtox">–</div><div class="stat-tag">MC toxicity probability</div></div>
       </div>
     </div>
@@ -183,7 +216,7 @@
     <section class="chart-card">
       <div class="chart-title">Concentration–Time Curve (repeated PO Digoxin)</div>
       <div class="chart-subtitle">
-        Green band = 95 % prediction interval (IIV, N&thinsp;=&thinsp;500) · Solid green = population median ·
+        Green band = 95 % prediction interval (IIV, N&thinsp;=&thinsp;<span id="mcChartN">1000</span>) · Solid green = population median ·
         Orange = Bayesian MAP individual · Dashed blue = healthy-adult reference ·
         Red dots = TDM observations
       </div>
@@ -195,7 +228,7 @@
       <div class="explain-title">MC-Based Precision Dosing Suggestions</div>
       <p class="explain-body">
         Grid search over common PO regimens (62.5–250&nbsp;µg, q24–48 h). Each regimen scored by
-        probability of target attainment (PTA: 0.5–1.0&nbsp;ng/mL Cmin,ss) from 200 virtual patients.
+        probability of target attainment (PTA: 0.5–1.0&nbsp;ng/mL Cmin,ss) from <span id="mcOptN">300</span> virtual patients.
         <b>Educational only — not medical advice.</b>
       </p>
       <div id="optTableWrapper" style="margin-top:6px"></div>
@@ -206,6 +239,15 @@
       <div class="explain-title">Prediction-Error Metrics (Individual Validation)</div>
       <p class="explain-body" id="validText"></p>
       <div class="metrics-grid" id="validMetrics" style="margin-top:8px"></div>
+    </div>
+
+    <div class="explain-card">
+      <div class="explain-title">Synthetic Benchmark Summary</div>
+      <p class="explain-body">
+        Scenario-based sanity checks using fixed literature-informed patient profiles and example TDM points.
+        These benchmarks are useful for internal regression testing only and do not replace external clinical validation.
+      </p>
+      <div id="benchmarkTableWrapper" class="table-scroll" style="margin-top:8px"></div>
     </div>
 
     <!-- Model Card (collapsible) -->
@@ -225,11 +267,13 @@
           </tbody>
         </table>
         <p><b>Residual error:</b> proportional, σ²&thinsp;=&thinsp;0.04 (~20 % CV, log-domain).</p>
-        <p><b>Bayesian MAP:</b> coordinate-descent grid search on η<sub>CL</sub> (and η<sub>V1</sub> if ≥ 2 TDM points).
+        <p><b>Bayesian MAP:</b> coarse-to-fine coordinate grid search on η<sub>CL</sub> (and η<sub>V1</sub> if ≥ 2 TDM points).
           Prior: log-normal IIV. Likelihood: proportional error.</p>
-        <p><b>Monte Carlo:</b> 500 virtual patients with IIV on CL, V1, V2, Q. PI = 5th–95th percentile.</p>
+        <p><b>Monte Carlo:</b> 1000 virtual patients with IIV on CL, V1, V2, Q. PI = 5th–95th percentile.</p>
         <p><b>DDI Education:</b> Amiodarone (CL×0.75), Verapamil (CL×0.70), Quinidine (CL×0.50) — simplified P-gp-inhibition models.</p>
-        <p><b>Validation status:</b> Internal consistency only. No external dataset evaluation.
+        <p><b>Parameter provenance:</b> Typical digoxin CL, distribution volumes, and renal-function dependence are literature-informed educational anchors.
+          Weight exponents are didactic allometric approximations rather than a validated bedside dosing model.</p>
+        <p><b>Validation status:</b> Internal consistency plus synthetic scenario benchmarks only. No external dataset evaluation.
           Prediction-error metrics are shown when TDM data are entered.</p>
         <p><b>Intended use:</b> Educational / portfolio demonstration of MIPD concepts.
           <span style="color:#fca5a5"><b>NOT for clinical prescribing.</b></span></p>
@@ -284,8 +328,8 @@ const OMEGA_Q  = 0.04;
 const SIGMA_PROP = 0.04; // ~20 % CV
 
 // MC settings
-const N_MC     = 500;  // PI bands
-const N_MC_OPT = 200;  // dose optimisation
+const N_MC     = 1000; // PI bands
+const N_MC_OPT = 300;  // dose optimisation
 
 // Adult reference
 const REF_AGE = 40, REF_WT = 70, REF_SEX = "M", REF_SCR = 0.9;
@@ -301,6 +345,27 @@ const DDI_FACTORS = {
   amiodarone: { cl: 0.75, label: "Amiodarone (CL×0.75)" },
   verapamil:  { cl: 0.70, label: "Verapamil (CL×0.70)" },
   quinidine:  { cl: 0.50, label: "Quinidine (CL×0.50)" }
+};
+
+const VALIDATION_CASES = {
+  frail_renal: {
+    label: "Frail renal impairment",
+    summary: "86F, 48 kg, Scr 1.5, amiodarone co-therapy; elevated late concentrations.",
+    inputs: { age: 86, weight: 48, sex: "F", scr: 1.5, dose: 62.5, tau: 48, nDoses: 12, potassium: 4.1, ddi: "amiodarone" },
+    tdm: [{ tPostDose: 12, conc: 1.16 }, { tPostDose: 24, conc: 0.94 }]
+  },
+  stable_trough: {
+    label: "Stable maintenance trough",
+    summary: "74M, 72 kg, preserved renal function; troughs near the illustrative target window.",
+    inputs: { age: 74, weight: 72, sex: "M", scr: 1.0, dose: 125, tau: 24, nDoses: 10, potassium: 4.3, ddi: "none" },
+    tdm: [{ tPostDose: 8, conc: 1.04 }, { tPostDose: 24, conc: 0.71 }]
+  },
+  ddi_accumulation: {
+    label: "DDI accumulation risk",
+    summary: "79F, 58 kg, verapamil co-therapy; demonstrates accumulation and posterior correction.",
+    inputs: { age: 79, weight: 58, sex: "F", scr: 1.2, dose: 125, tau: 24, nDoses: 10, potassium: 3.7, ddi: "verapamil" },
+    tdm: [{ tPostDose: 10, conc: 1.88 }, { tPostDose: 24, conc: 1.21 }]
+  }
 };
 
 /* ============================================================
@@ -335,6 +400,27 @@ function simpleHash(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
   return Math.abs(h);
+}
+
+function interpolateConcentration(sim, time) {
+  for (let j = 0; j < sim.t.length - 1; j++) {
+    if (sim.t[j] <= time && sim.t[j + 1] >= time) {
+      const frac = (time - sim.t[j]) / (sim.t[j + 1] - sim.t[j]);
+      return sim.C[j] + frac * (sim.C[j + 1] - sim.C[j]);
+    }
+  }
+  return sim.C[sim.C.length - 1] || 0;
+}
+
+function optimizeEta(center, span, nGrid, evaluator) {
+  let bestEta = center;
+  let bestOFV = Infinity;
+  for (let i = 0; i < nGrid; i++) {
+    const eta = center - span + (2 * span * i) / (nGrid - 1);
+    const ofv = evaluator(eta);
+    if (ofv < bestOFV) { bestOFV = ofv; bestEta = eta; }
+  }
+  return { eta: bestEta, ofv: bestOFV };
 }
 
 /* ============================================================
@@ -486,15 +572,7 @@ function mapOFV(etaCL, etaV1, popPk, tdmAbs, dose, tau, nDoses) {
 
   // likelihood (log-domain proportional)
   for (const obs of tdmAbs) {
-    // find Cpred at obs.time (linear interpolation)
-    let cpred = 0;
-    for (let j = 0; j < sim.t.length - 1; j++) {
-      if (sim.t[j] <= obs.time && sim.t[j + 1] >= obs.time) {
-        const frac = (obs.time - sim.t[j]) / (sim.t[j + 1] - sim.t[j]);
-        cpred = sim.C[j] + frac * (sim.C[j + 1] - sim.C[j]);
-        break;
-      }
-    }
+    let cpred = interpolateConcentration(sim, obs.time);
     if (cpred < 1e-12) cpred = 1e-12;
     ofv += Math.pow(Math.log(obs.conc) - Math.log(cpred), 2) / SIGMA_PROP;
   }
@@ -502,33 +580,24 @@ function mapOFV(etaCL, etaV1, popPk, tdmAbs, dose, tau, nDoses) {
 }
 
 function bayesianMAP(tdmAbs, popPk, dose, tau, nDoses) {
-  const rangeCL = 3.0 * Math.sqrt(OMEGA_CL);
-  const rangeV1 = 3.0 * Math.sqrt(OMEGA_V1);
   let etaCL = 0, etaV1 = 0;
+  let spanCL = 3.0 * Math.sqrt(OMEGA_CL);
+  let spanV1 = 3.0 * Math.sqrt(OMEGA_V1);
+  let bestOFV = mapOFV(etaCL, etaV1, popPk, tdmAbs, dose, tau, nDoses);
 
-  const nIter = 3;
-  const nGrid = 101;
+  for (let iter = 0; iter < 5; iter++) {
+    const clSearch = optimizeEta(etaCL, spanCL, 61, eta => mapOFV(eta, etaV1, popPk, tdmAbs, dose, tau, nDoses));
+    etaCL = clSearch.eta;
+    bestOFV = clSearch.ofv;
 
-  for (let iter = 0; iter < nIter; iter++) {
-    // optimise η_CL
-    let bestCL = etaCL, bestOFV = Infinity;
-    for (let i = 0; i < nGrid; i++) {
-      const eta = -rangeCL + (2 * rangeCL * i) / (nGrid - 1);
-      const ofv = mapOFV(eta, etaV1, popPk, tdmAbs, dose, tau, nDoses);
-      if (ofv < bestOFV) { bestOFV = ofv; bestCL = eta; }
-    }
-    etaCL = bestCL;
-
-    // optimise η_V1 (only meaningful with ≥2 TDM)
     if (tdmAbs.length >= 2) {
-      let bestV1 = etaV1; bestOFV = Infinity;
-      for (let i = 0; i < nGrid; i++) {
-        const eta = -rangeV1 + (2 * rangeV1 * i) / (nGrid - 1);
-        const ofv = mapOFV(etaCL, eta, popPk, tdmAbs, dose, tau, nDoses);
-        if (ofv < bestOFV) { bestOFV = ofv; bestV1 = eta; }
-      }
-      etaV1 = bestV1;
+      const v1Search = optimizeEta(etaV1, spanV1, 61, eta => mapOFV(etaCL, eta, popPk, tdmAbs, dose, tau, nDoses));
+      etaV1 = v1Search.eta;
+      bestOFV = v1Search.ofv;
     }
+
+    spanCL *= 0.35;
+    spanV1 *= 0.35;
   }
 
   const CL_i = popPk.CL * Math.exp(etaCL);
@@ -539,7 +608,7 @@ function bayesianMAP(tdmAbs, popPk, dose, tau, nDoses) {
     return Math.log(2) / (0.5 * ((k10 + k12 + k21) - disc));
   })();
 
-  return { etaCL, etaV1, CL_i, V1_i, tHalf_i };
+  return { etaCL, etaV1, CL_i, V1_i, tHalf_i, ofv: bestOFV };
 }
 
 /* ============================================================
@@ -551,20 +620,10 @@ function predictionMetrics(tdmAbs, popPk, mapResult, dose, tau, nDoses) {
   const simPop = simulate(dose, tau, nDoses, popPk.CL, popPk.V1, popPk.V2, popPk.Q, F_PO, 0.1);
   const simInd = simulate(dose, tau, nDoses, CL_i, V1_i, popPk.V2, popPk.Q, F_PO, 0.1);
 
-  function cpredAt(sim, time) {
-    for (let j = 0; j < sim.t.length - 1; j++) {
-      if (sim.t[j] <= time && sim.t[j + 1] >= time) {
-        const frac = (time - sim.t[j]) / (sim.t[j + 1] - sim.t[j]);
-        return sim.C[j] + frac * (sim.C[j + 1] - sim.C[j]);
-      }
-    }
-    return sim.C[sim.C.length - 1];
-  }
-
   const popPEs = [], indPEs = [];
   for (const obs of tdmAbs) {
-    const cpPop = cpredAt(simPop, obs.time);
-    const cpInd = cpredAt(simInd, obs.time);
+    const cpPop = interpolateConcentration(simPop, obs.time);
+    const cpInd = interpolateConcentration(simInd, obs.time);
     popPEs.push({ pe: cpPop - obs.conc, pePct: ((cpPop - obs.conc) / obs.conc) * 100 });
     indPEs.push({ pe: cpInd - obs.conc, pePct: ((cpInd - obs.conc) / obs.conc) * 100 });
   }
@@ -664,7 +723,7 @@ function doseOptimizationMC(popPk, ddi, seed) {
     }
   }
 
-  results.sort((a, b) => b.pta - a.pta || a.pSafe - b.pSafe);
+  results.sort((a, b) => b.pta - a.pta || b.pSafe - a.pSafe);
   return results.slice(0, 5);
 }
 
@@ -839,7 +898,7 @@ function renderAlerts(alerts) {
 function renderOptTable(regimens) {
   const w = document.getElementById("optTableWrapper");
   if (!regimens.length) { w.innerHTML = "<i>No regimens within safety filters.</i>"; return; }
-  let h = `<table class="dose-table"><thead><tr>
+  let h = `<div class="table-scroll"><table class="dose-table"><thead><tr>
     <th>#</th><th>Dose (µg)</th><th>τ (h)</th><th>Cmax,ss</th><th>Cmin,ss</th>
     <th>PTA (%)</th><th>P(safe) (%)</th><th>Label</th></tr></thead><tbody>`;
   regimens.forEach((r, i) => {
@@ -852,8 +911,61 @@ function renderOptTable(regimens) {
       <td>${r.cmax.toFixed(2)}</td><td>${r.cmin.toFixed(2)}</td>
       <td>${r.pta.toFixed(0)}</td><td>${r.pSafe.toFixed(0)}</td><td>${lbl}</td></tr>`;
   });
+  h += "</tbody></table></div>";
+  w.innerHTML = h;
+}
+
+function renderBenchmarkTable(rows) {
+  const w = document.getElementById("benchmarkTableWrapper");
+  let h = `<table class="dose-table"><thead><tr>
+    <th>Case</th><th>Prior RMSE</th><th>Posterior RMSE</th><th>RMSE change</th><th>Comment</th>
+  </tr></thead><tbody>`;
+  rows.forEach(row => {
+    const delta = row.mapRmse - row.popRmse;
+    const color = delta <= 0 ? "#4ade80" : "#fca5a5";
+    h += `<tr><td>${row.label}</td><td>${row.popRmse.toFixed(3)}</td><td>${row.mapRmse.toFixed(3)}</td>`
+      + `<td style="color:${color}">${delta.toFixed(3)}</td><td>${row.summary}</td></tr>`;
+  });
   h += "</tbody></table>";
   w.innerHTML = h;
+}
+
+function setBenchmarkLabels() {
+  document.getElementById("mcStatsN").textContent = String(N_MC);
+  document.getElementById("mcChartN").textContent = String(N_MC);
+  document.getElementById("mcOptN").textContent = String(N_MC_OPT);
+}
+
+function applyValidationCase(caseKey) {
+  const preset = VALIDATION_CASES[caseKey];
+  if (!preset) return;
+  const { inputs, tdm, summary } = preset;
+  document.getElementById("age").value = inputs.age;
+  document.getElementById("weight").value = inputs.weight;
+  document.getElementById("sex").value = inputs.sex;
+  document.getElementById("scr").value = inputs.scr;
+  document.getElementById("dose").value = inputs.dose;
+  document.getElementById("tau").value = inputs.tau;
+  document.getElementById("nDoses").value = inputs.nDoses;
+  document.getElementById("potassium").value = inputs.potassium;
+  document.getElementById("ddi").value = inputs.ddi;
+  document.getElementById("tdm1T").value = tdm[0]?.tPostDose ?? "";
+  document.getElementById("tdm1C").value = tdm[0]?.conc ?? "";
+  document.getElementById("tdm2T").value = tdm[1]?.tPostDose ?? "";
+  document.getElementById("tdm2C").value = tdm[1]?.conc ?? "";
+  document.getElementById("benchmarkCaseNote").textContent = summary;
+}
+
+function buildSyntheticBenchmarkRows() {
+  return Object.values(VALIDATION_CASES).map(preset => {
+    const { inputs, tdm, label, summary } = preset;
+    const popPk = poppkParams(inputs.age, inputs.weight, inputs.sex, inputs.scr, inputs.ddi);
+    const lastDoseTime = (inputs.nDoses - 1) * inputs.tau;
+    const tdmAbs = tdm.map(p => ({ time: lastDoseTime + p.tPostDose, conc: p.conc, tPostDose: p.tPostDose }));
+    const mapRes = bayesianMAP(tdmAbs, popPk, inputs.dose, inputs.tau, inputs.nDoses);
+    const metrics = predictionMetrics(tdmAbs, popPk, mapRes, inputs.dose, inputs.tau, inputs.nDoses);
+    return { label, summary, popRmse: metrics.pop.rmse, mapRmse: metrics.ind.rmse };
+  });
 }
 
 function renderBayesian(mapRes, metrics) {
@@ -865,7 +977,8 @@ function renderBayesian(mapRes, metrics) {
     + `η<sub>V1</sub>&thinsp;=&thinsp;${mapRes.etaV1.toFixed(3)}<br/>`
     + `Individual CL&thinsp;=&thinsp;${mapRes.CL_i.toFixed(2)} L/h, `
     + `V1&thinsp;=&thinsp;${mapRes.V1_i.toFixed(1)} L, `
-    + `t½β&thinsp;=&thinsp;${mapRes.tHalf_i.toFixed(1)} h`;
+    + `t½β&thinsp;=&thinsp;${mapRes.tHalf_i.toFixed(1)} h, `
+    + `OFV&thinsp;=&thinsp;${mapRes.ofv.toFixed(3)}`;
 
   document.getElementById("bayesMetrics").innerHTML = "";
 }
@@ -995,8 +1108,15 @@ function runSimulation() {
    15. BOOTSTRAP
    ============================================================ */
 window.addEventListener("DOMContentLoaded", () => {
+  setBenchmarkLabels();
   initChart();
   document.getElementById("runBtn").addEventListener("click", runSimulation);
+  document.getElementById("loadCaseBtn").addEventListener("click", () => {
+    applyValidationCase(document.getElementById("benchmarkCase").value);
+    runSimulation();
+  });
+  renderBenchmarkTable(buildSyntheticBenchmarkRows());
+  applyValidationCase("frail_renal");
   runSimulation();
 });
 </script>
