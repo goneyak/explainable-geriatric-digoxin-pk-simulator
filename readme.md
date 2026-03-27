@@ -75,10 +75,13 @@ No backend or external server is required.
 Clone the repository and open one of the HTML files in your browser.
 
 ```bash
-git clone https://github.com/goneyak/geriatric-digoxin-pk-digital-twin.git
-cd geriatric-digoxin-pk-digital-twin
+git clone https://github.com/goneyak/explainable-geriatric-digoxin-pk-simulator.git
+cd explainable-geriatric-digoxin-pk-simulator
 open version_3.html
 ```
+
+---
+
 ## Project Goal
 
 This project sits at the intersection of:
